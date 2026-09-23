@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>معمل الذاكرة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EEF3F7; --card:#FFFFFF; --ink:#1F2452; --muted:#5B6485; --line:#D3DBE6;
+  --mark:#FFD84D; --markink:#3b2f00; --accent:#3A4CC7; --accentink:#FFFFFF;
+  --good:#1F8A5B; --bad:#D0393E; --goodbg:#DDF3E8; --badbg:#FADCDD; --grid:rgba(58,76,199,.08);
+  --font:'IBM Plex Sans Arabic',Tahoma,'Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#151A2E; --card:#1D2340; --ink:#E7EAFB; --muted:#9AA3C7; --line:#2E3660;
+    --mark:#E6B800; --markink:#1a1400; --accent:#8B9BFF; --accentink:#101430;
+    --good:#5FD39A; --bad:#FF7A80; --goodbg:#173B2D; --badbg:#48232A; --grid:rgba(139,155,255,.08);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#151A2E; --card:#1D2340; --ink:#E7EAFB; --muted:#9AA3C7; --line:#2E3660;
+  --mark:#E6B800; --markink:#1a1400; --accent:#8B9BFF; --accentink:#101430;
+  --good:#5FD39A; --bad:#FF7A80; --goodbg:#173B2D; --badbg:#48232A; --grid:rgba(139,155,255,.08);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; font-family:var(--font); color:var(--ink); background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px; line-height:1.7; font-size:16px; min-height:100vh;
+}
+.wrap{max-width:780px;margin:0 auto;padding:20px 16px 48px}
+header h1{font-size:clamp(1.7rem,6vw,2.4rem);margin:8px 0 2px;font-weight:700;letter-spacing:-.01em}
+header p{margin:0 0 18px;color:var(--muted);max-width:52ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 -1px;position:relative;z-index:1}
+.tab{font:inherit;font-weight:600;padding:9px 16px;border:1px solid var(--line);border-bottom:none;border-radius:12px 12px 0 0;
+  background:transparent;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:inset 0 3px 0 var(--mark)}
+.tab:focus-visible,.btn:focus-visible,.inp:focus-visible,.seg input:focus-visible+span,select:focus-visible,summary:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:0 14px 14px 14px;padding:20px;min-height:340px}
+.panel[hidden]{display:none}
+.note{margin:0 0 16px;padding:10px 14px;border-inline-start:4px solid var(--mark);background:color-mix(in srgb,var(--mark) 14%,transparent);border-radius:6px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end;margin-bottom:16px}
+.ctl{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted)}
+select,.inp{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.inp{width:100%}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg label{cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:8px 14px;color:var(--ink)}
+.seg input:checked+span{background:var(--accent);color:var(--accentink);font-weight:600}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--ink)}
+.btn{font:inherit;font-weight:600;padding:10px 20px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accentink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{padding:5px 12px;font-size:.85rem}
+.btn:active{transform:translateY(1px)}
+.stage{min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:10px 0}
+.stage .empty{color:var(--muted);max-width:40ch}
+.num{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;direction:ltr}
+.grp,.blk{display:inline-flex;gap:2px;padding:0 10px;border-radius:6px}
+.grp{background:linear-gradient(transparent 52%,var(--mark) 52% 90%,transparent 90%);color:var(--ink)}
+.dg{display:inline-flex;flex-direction:column;align-items:center;min-width:1.1ch}
+.dg b{font-size:clamp(1.7rem,7vw,2.7rem);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+.dg i{font-style:normal;font-size:1.05rem;line-height:1.2}
+.grp .dg b{color:var(--ink)}
+.bar{width:100%;max-width:420px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);border-radius:99px;width:100%}
+.hint{margin:0;color:var(--muted)}
+.q{margin:0;font-size:1.15rem;font-weight:600}
+.num-in{max-width:340px;text-align:center;font-size:1.6rem;letter-spacing:.15em;font-variant-numeric:tabular-nums}
+.res{width:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
+.cmp{display:flex;gap:4px;direction:ltr;flex-wrap:wrap;justify-content:center}
+.cmp span{width:2.1rem;height:2.6rem;display:grid;place-items:center;border-radius:8px;font-weight:700;font-size:1.3rem;font-variant-numeric:tabular-nums}
+.cmp .ok{background:var(--goodbg);color:var(--good)}
+.cmp .no{background:var(--badbg);color:var(--bad)}
+.score{font-size:1.2rem;font-weight:700}
+.stats{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);color:var(--muted);font-size:.95rem}
+.stats strong{color:var(--ink)}
+details{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+summary{cursor:pointer;font-weight:600}
+.pegs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+.peg{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--paper);border-radius:8px}
+.peg b{font-size:1.3rem;min-width:1ch}
+.peg em{font-style:normal;font-size:.85rem;color:var(--muted)}
+.faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;width:100%;text-align:start}
+.person{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--paper);display:flex;flex-direction:column;gap:6px}
+.person svg{width:96px;height:106px;align-self:center}
+.person h3{margin:0;font-size:1.25rem;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.chip{font-size:.8rem;padding:1px 9px;border-radius:99px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--ink)}
+.face-big svg{width:150px;height:165px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:400px}
+.opt{font:inherit;font-weight:600;font-size:1.05rem;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.opt.right{background:var(--goodbg);border-color:var(--good);color:var(--good)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad);color:var(--bad)}
+.pairs{display:flex;flex-direction:column;gap:8px;width:100%;text-align:start}
+.pair{display:grid;grid-template-columns:minmax(90px,.7fr) 2fr;gap:10px;align-items:center;padding:10px 12px;background:var(--paper);border-radius:10px;border:1px solid var(--line)}
+.pair .loc{font-weight:600}
+.pair.ok{border-color:var(--good);background:var(--goodbg)}
+.pair.no{border-color:var(--bad);background:var(--badbg)}
+.locs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;width:100%}
+.rv{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.rv-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper)}
+.rv-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+.rv-head strong{overflow-wrap:anywhere}
+.steps{display:flex;flex-direction:column;gap:6px}
+.step{display:flex;gap:10px;align-items:center;font-size:.95rem}
+.step.due .when{color:var(--accent);font-weight:700}
+.step.done .lab{text-decoration:line-through;color:var(--muted)}
+.when{color:var(--muted);font-size:.85rem;margin-inline-start:auto}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+.add .inp{flex:1;min-width:200px}
+.tip{margin:0;color:var(--muted);font-size:.9rem;max-width:52ch}
+@media (max-width:520px){.panel{padding:14px}.pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>معمل الذاكرة</h1>
+    <p>أرقام، أسماء، وتفاصيل يومية. جرّب كل تقنية بنفسك وقارن نتيجتك قبل وبعد.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="أدوات الذاكرة">
+    <button class="tab" role="tab" id="t-num" aria-selected="true" aria-controls="p-num">الأرقام</button>
+    <button class="tab" role="tab" id="t-names" aria-selected="false" aria-controls="p-names" tabindex="-1">الأسماء</button>
+    <button class="tab" role="tab" id="t-loci" aria-selected="false" aria-controls="p-loci" tabindex="-1">التفاصيل اليومية</button>
+    <button class="tab" role="tab" id="t-review" aria-selected="false" aria-controls="p-review" tabindex="-1">جدول المراجعة</button>
+  </div>
+
+  <!-- NUMBERS -->
+  <section class="panel" role="tabpanel" id="p-num" aria-labelledby="t-num">
+    <p class="note">المخ بيحفظ مجموعات صغيرة (٣–٤ أرقام) أسهل بكتير من رقم طويل ورا بعضه. جرّب الطريقتين وشوف نتيجتك.</p>
+    <div class="controls">
+      <div class="ctl">طريقة العرض
+        <div class="seg" role="radiogroup" aria-label="طريقة العرض">
+          <label><input type="radio" name="n-mode" value="block"><span>كتلة واحدة</span></label>
+          <label><input type="radio" name="n-mode" value="chunk" checked><span>مجموعات</span></label>
+        </div>
+      </div>
+      <label class="ctl">طول الرقم
+        <select id="n-len">
+          <option value="6">٦ أرقام</option>
+          <option value="8">٨ أرقام</option>
+          <option value="11" selected>١١ رقم (زي رقم موبايل)</option>
+          <option value="14">١٤ رقم</option>
+        </select>
+      </label>
+      <label class="ctl">وقت الحفظ
+        <select id="n-secs">
+          <option value="6">٦ ثواني</option>
+          <option value="10" selected>١٠ ثواني</option>
+          <option value="15">١٥ ثانية</option>
+          <option value="25">٢٥ ثانية</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="n-imgs"> أظهر صور الأرقام</label>
+      <button class="btn" id="n-start">ابدأ جولة</button>
+    </div>
+    <div class="stage" id="n-stage" aria-live="polite">
+      <p class="empty">اختار الإعدادات واضغط «ابدأ جولة». الرقم هيظهر لثواني وبعدين يختفي وتكتبه من ذاكرتك.</p>
+    </div>
+    <div class="stats" id="n-stats"></div>
+    <details>
+      <summary>صور الأرقام: كل رقم له شكل تفتكره بيه</summary>
+      <p class="tip" style="margin-top:8px">لما تشوف رقم، حوّله لصورة، وبعدين اربط صور المجموعة في مشهد واحد. مثال: ٣١ = شارب + قلم، يعني «شارب بيمسك قلم».</p>
+      <div class="pegs" id="pegs"></div>
+    </details>
+  </section>
+
+  <!-- NAMES -->
+  <section class="panel" role="tabpanel" id="p-names" aria-labelledby="t-names" hidden>
+    <p class="note">الاسم لوحده بيتنسى بسرعة. اختار ملمح واضح في الوش واربطه بالاسم في صورة مضحكة أو مبالغ فيها.</p>
+    <div class="controls"><button class="btn" id="a-start">جولة جديدة (٦ أشخاص)</button></div>
+    <div class="stage" id="a-stage" aria-live="polite">
+      <p class="empty">هتشوف ٦ وشوش بأسمائها وملامحها لمدة ٤٥ ثانية، وبعدين اختبار: مين صاحب الوش ده؟</p>
+    </div>
+  </section>
+
+  <!-- LOCI -->
+  <section class="panel" role="tabpanel" id="p-loci" aria-labelledby="t-loci" hidden>
+    <p class="note">قصر الذاكرة: حط كل معلومة في مكان معروف عندك في البيت، وتخيّلها هناك بشكل غريب. المكان بيفكّرك بالمعلومة.</p>
+    <div class="ctl" style="margin-bottom:14px">أماكنك الخمسة (بالترتيب اللي بتمشي بيه في بيتك)
+      <div class="locs" id="l-locs"></div>
+    </div>
+    <div class="controls"><button class="btn" id="l-start">هات ٥ مهام يومية</button></div>
+    <div class="stage" id="l-stage" aria-live="polite">
+      <p class="empty">هتاخد ٥ حاجات عادية (مهام وتفاصيل)، وتوزّعها على أماكنك، وبعدين تتختبر من غير ما تشوفها.</p>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="panel" role="tabpanel" id="p-review" aria-labelledby="t-review" hidden>
+    <p class="note">المعلومة بتترسّخ بالمراجعة على فترات متباعدة، مش بالتكرار المتواصل في ساعة واحدة. اكتب اللي عايز تحفظه وخد جدولك.</p>
+    <div class="add">
+      <input class="inp" id="r-text" maxlength="80" placeholder="مثلاً: رقم الجيران / اسم زميل جديد / كلمة مرور الواي فاي" aria-label="اللي عايز تحفظه">
+      <button class="btn" id="r-add">اعمل جدول</button>
+    </div>
+    <p class="tip" style="margin-top:8px">راجع كل مرة من غير ما تبص على الإجابة الأول: حاول تفتكرها، وبعدين اتأكد.</p>
+    <div class="rv" id="r-list"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var rnd=function(n){return Math.floor(Math.random()*n)};
+var pick=function(a){return a[rnd(a.length)]};
+var shuffle=function(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a[i];a[i]=a[j];a[j]=t}return a};
+var AD='٠١٢٣٤٥٦٧٨٩';
+var norm=function(s){return String(s).toLowerCase().replace(/[٠-٩]/g,function(d){return AD.indexOf(d)}).replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim()};
+
+var saved={};
+try{saved=JSON.parse(localStorage.getItem('memlab-v1'))||{}}catch(e){saved={}}
+function persist(){try{localStorage.setItem('memlab-v1',JSON.stringify(saved))}catch(e){}}
+
+/* ---------- Tabs ---------- */
+var tabs=$$('.tab');
+function selectTab(t){
+  tabs.forEach(function(x){
+    var on=x===t;
+    x.setAttribute('aria-selected',on);
+    x.tabIndex=on?0:-1;
+    $('#'+x.getAttribute('aria-controls')).hidden=!on;
+  });
+}
+tabs.forEach(function(t,i){
+  t.addEventListener('click',function(){selectTab(t)});
+  t.addEventListener('keydown',function(e){
+    var d=e.key==='ArrowLeft'?1:e.key==='ArrowRight'?-1:0; // RTL
+    if(!d)return;
+    var n=tabs[(i+d+tabs.length)%tabs.length];
+    selectTab(n);n.focus();
+  });
+});
+
+/* ---------- NUMBERS ---------- */
+var PEG=[['0','⚽','كرة'],['1','✏️','قلم'],['2','🦢','بجعة'],['3','🥸','شارب'],['4','⛵','شراع'],['5','🎣','سنارة'],['6','🐌','حلزونة'],['7','🚩','علم'],['8','⛄','راجل تلج'],['9','🎈','بالونة']];
+var IMG={};PEG.forEach(function(p){IMG[p[0]]=p[1]});
+$('#pegs').innerHTML=PEG.map(function(p){return '<div class="peg"><b dir="ltr">'+p[0]+'</b><span>'+p[1]+'</span><em>'+p[2]+'</em></div>'}).join('');
+
+var LAYOUT={6:[3,3],8:[4,4],11:[3,4,4],14:[4,3,3,4]};
+function genDigits(len){
+  var s='';
+  if(len===11)s='01'+'0125'[rnd(4)];
+  while(s.length<len)s+=rnd(10);
+  return s;
+}
+function numHTML(d,chunked,imgs){
+  var parts=chunked?LAYOUT[d.length]:[d.length],i=0,h='';
+  parts.forEach(function(n){
+    var g='';
+    for(var k=0;k<n;k++,i++){g+='<span class="dg"><b>'+d[i]+'</b>'+(imgs?'<i>'+IMG[d[i]]+'</i>':'')+'</span>'}
+    h+='<span class="'+(chunked?'grp':'blk')+'">'+g+'</span>';
+  });
+  return '<div class="num" dir="ltr">'+h+'</div>';
+}
+var nStage=$('#n-stage'),nTimer=null;
+function nStats(){
+  var s=saved.num||{block:[],chunk:[]};
+  function avg(a){
+    var last=a.slice(-5);
+    if(!last.length)return null;
+    var sum=0,tot=0;last.forEach(function(r){sum+=r.s;tot+=r.l});
+    return Math.round(sum/tot*100);
+  }
+  var b=avg(s.block||[]),c=avg(s.chunk||[]);
+  var el=$('#n-stats');
+  if(b===null&&c===null){el.innerHTML='لسه مفيش نتائج. جرّب جولة بكل طريقة عشان تقارن.';return}
+  el.innerHTML='متوسط الأرقام الصحيحة في آخر ٥ جولات:  كتلة واحدة <strong>'+(b===null?'—':b+'%')+'</strong>  |  مجموعات <strong>'+(c===null?'—':c+'%')+'</strong>';
+}
+function nStart(){
+  clearTimeout(nTimer);
+  var len=+$('#n-len').value,secs=+$('#n-secs').value;
+  var mode=$('input[name=n-mode]:checked').value,imgs=$('#n-imgs').checked;
+  var d=genDigits(len);
+  nStage.innerHTML=numHTML(d,mode==='chunk',imgs)+
+    '<div class="bar"><span id="n-bar"></span></div>'+
+    '<p class="hint">احفظ الرقم… باقي <span id="n-left">'+secs+'</span> ثانية</p>'+
+    '<button class="btn ghost" id="n-skip">خلّصت، اخفي الرقم</button>';
+  var bar=$('#n-bar');bar.style.transition='none';bar.style.width='100%';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){bar.style.transition='width '+secs+'s linear';bar.style.width='0%'})});
+  var left=secs;
+  function tick(){
+    left--;
+    var el=$('#n-left');if(el)el.textContent=Math.max(left,0);
+    if(left<=0)recall();else nTimer=setTimeout(tick,1000);
+  }
+  nTimer=setTimeout(tick,1000);
+  $('#n-skip').onclick=function(){recall()};
+  function recall(){
+    clearTimeout(nTimer);
+    nStage.innerHTML='<p class="q">اكتب الرقم اللي حفظته</p>'+
+      '<input id="n-in" class="inp num-in" dir="ltr" inputmode="numeric" autocomplete="off" maxlength="'+len+'" aria-label="الرقم">'+
+      '<button class="btn" id="n-check">تحقق</button>';
+    var inp=$('#n-in');inp.focus();
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter')check()});
+    $('#n-check').onclick=check;
+  }
+  function check(){
+    var v=norm($('#n-in').value).replace(/\D/g,'');
+    var ok=0,cells='';
+    for(var i=0;i<len;i++){
+      var hit=v[i]===d[i];if(hit)ok++;
+      cells+='<span class="'+(hit?'ok':'no')+'">'+(v[i]||'·')+'</span>';
+    }
+    var msg=ok===len?'ممتاز! الرقم كله صح 🎯':'صح '+ok+' من '+len;
+    nStage.innerHTML='<div class="res"><div class="cmp" aria-label="إجابتك">'+cells+'</div>'+
+      '<div class="score">'+msg+'</div>'+
+      (ok===len?'':'<div class="hint">الرقم الصحيح</div>'+numHTML(d,mode==='chunk',false))+
+      '<button class="btn" id="n-again">جولة تانية</button></div>';
+    saved.num=saved.num||{block:[],chunk:[]};
+    var arr=saved.num[mode]=saved.num[mode]||[];
+    arr.push({s:ok,l:len});
+    if(arr.length>20)arr.shift();
+    persist();nStats();
+    $('#n-again').onclick=nStart;
+  }
+}
+$('#n-start').onclick=nStart;
+nStats();
+
+/* ---------- NAMES ---------- */
+var MEN=['مصطفى','كريم','عمر','طارق','ياسر','حسام','وليد','سامح'];
+var WOMEN=['منى','هدى','سلمى','دينا','ريم','نهى','لبنى','آية'];
+var SKINS=['#F3CFAE','#E0AE83','#B98058','#8A5B3A'];
+var HAIRS=[['#1c1c1c','أسود'],['#5a3a22','بني'],['#c9a44c','أشقر'],['#9a9a9a','رمادي'],['#9c3d1c','أحمر']];
+var SCARVES=[['#2F6DB5','زرقاء'],['#B23A48','حمراء'],['#2E8B6B','خضراء'],['#7B4FA3','بنفسجية'],['#E0A030','صفراء']];
+var SHIRTS=['#3d5a80','#6d597a','#457b9d','#588157','#bc6c25','#495057'];
+function makePerson(name,female){
+  var p={name:name,female:female,skin:pick(SKINS),shirt:pick(SHIRTS),hair:pick(HAIRS),scarf:pick(SCARVES)};
+  p.style=female?pick(['long','curly','scarf','scarf']):pick(['short','short','curly','bald']);
+  p.glasses=Math.random()<.4;
+  p.beard=!female&&Math.random()<.35;
+  p.stache=!female&&!p.beard&&Math.random()<.25;
+  var f=[];
+  if(p.style==='scarf')f.push('طرحة '+p.scarf[1]);
+  else if(p.style==='bald')f.push('أصلع');
+  else if(p.style==='long')f.push('شعر طويل '+p.hair[1]);
+  else if(p.style==='curly')f.push('شعر مجعد '+p.hair[1]);
+  else f.push('شعر قصير '+p.hair[1]);
+  if(p.glasses)f.push('نظارة');
+  if(p.beard)f.push('لحية');
+  if(p.stache)f.push('شارب');
+  p.feats=f;
+  return p;
+}
+function faceSVG(p){
+  var h=p.hair[0],s='<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="وش '+esc(p.name)+'">';
+  if(p.style==='scarf')s+='<path d="M17 62C13 18 87 18 83 62C83 92 70 105 50 105C30 105 17 92 17 62Z" fill="'+p.scarf[0]+'"/>';
+  if(p.style==='long')s+='<path d="M21 60C17 16 83 16 79 60L82 98L18 98Z" fill="'+h+'"/>';
+  s+='<path d="M18 110C20 92 36 88 50 88C64 88 80 92 82 110Z" fill="'+p.shirt+'"/>';
+  s+='<rect x="43" y="74" width="14" height="16" fill="'+p.skin+'"/>';
+  s+='<ellipse cx="50" cy="52" rx="23" ry="27" fill="'+p.skin+'"/>';
+  if(p.style==='short'||p.style==='long')s+='<path d="M27 47C24 17 76 17 73 47C66 34 34 34 27 47Z" fill="'+h+'"/>';
+  if(p.style==='curly'){
+    [[32,30],[42,24],[52,23],[62,25],[70,32],[27,40],[74,41]].forEach(function(c){s+='<circle cx="'+c[0]+'" cy="'+c[1]+'" r="9" fill="'+h+'"/>'});
+  }
+  if(p.style==='scarf')s+='<path d="M27 47C26 22 74 22 73 47C64 36 36 36 27 47Z" fill="'+p.scarf[0]+'"/>';
+  if(p.beard)s+='<path d="M27 56C26 88 74 88 73 56C68 74 32 74 27 56Z" fill="'+h+'"/>';
+  s+='<circle cx="41" cy="52" r="2.3" fill="#222"/><circle cx="59" cy="52" r="2.3" fill="#222"/>';
+  s+='<path d="M50 54L47 63L52 63" stroke="rgba(0,0,0,.35)" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  if(p.stache)s+='<path d="M39 66Q50 60 61 66Q50 69 39 66Z" fill="'+h+'"/>';
+  s+='<path d="M43 69Q50 75 57 69" stroke="'+(p.beard?'#f3d9d9':'#7a3b3b')+'" stroke-width="2" fill="none" stroke-linecap="round"/>';
+  if(p.glasses)s+='<circle cx="41" cy="52" r="7" fill="none" stroke="#222" stroke-width="2"/><circle cx="59" cy="52" r="7" fill="none" stroke="#222" stroke-width="2"/><path d="M48 52H52" stroke="#222" stroke-width="2"/>';
+  return s+'</svg>';
+}
+var aStage=$('#a-stage'),aTimer=null;
+function aStart(){
+  clearTimeout(aTimer);
+  var people=shuffle(MEN).slice(0,3).map(function(n){return makePerson(n,false)})
+    .concat(shuffle(WOMEN).slice(0,3).map(function(n){return makePerson(n,true)}));
+  people=shuffle(people);
+  var secs=45,left=secs;
+  aStage.innerHTML='<div class="bar"><span id="a-bar"></span></div>'+
+    '<p class="hint">ذاكر الوشوش… باقي <span id="a-left">'+secs+'</span> ثانية. اكتب لكل واحد صورة مضحكة تربط اسمه بملمحه.</p>'+
+    '<div class="faces">'+people.map(function(p,i){
+      return '<div class="person">'+faceSVG(p)+'<h3>'+esc(p.name)+'</h3><div class="chips">'+
+        p.feats.map(function(f){return '<span class="chip">'+esc(f)+'</span>'}).join('')+'</div>'+
+        '<input class="inp" data-i="'+i+'" maxlength="60" placeholder="صورتك الذهنية (اختياري)" aria-label="صورة ذهنية لـ '+esc(p.name)+'"></div>';
+    }).join('')+'</div>'+
+    '<button class="btn" id="a-go">خلّصت، ابدأ الاختبار</button>';
+  var bar=$('#a-bar');bar.style.transition='none';bar.style.width='100%';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){bar.style.transition='width '+secs+'s linear';bar.style.width='0%'})});
+  function tick(){
+    left--;var el=$('#a-left');if(el)el.textContent=Math.max(left,0);
+    if(left<=0)quiz();else aTimer=setTimeout(tick,1000);
+  }
+  aTimer=setTimeout(tick,1000);
+  $('#a-go').onclick=function(){quiz()};
+  function quiz(){
+    clearTimeout(aTimer);
+    var hooks=$$('.person .inp',aStage).map(function(x){return x.value.trim()});
+    var order=shuffle(people.map(function(p,i){return i})),qi=0,score=0;
+    function show(){
+      if(qi>=order.length){
+        aStage.innerHTML='<div class="res"><div class="score">نتيجتك: '+score+' من '+order.length+'</div>'+
+          '<p class="tip">'+(score>=5?'ممتاز. الربط بصور مبالغ فيها شغّال معاك.':'جرّب المرة الجاية تخلّي الصورة الذهنية أغرب وأكبر، وتقولها بصوت واطي.')+'</p>'+
+          '<button class="btn" id="a-again">جولة جديدة</button></div>';
+        $('#a-again').onclick=aStart;return;
+      }
+      var idx=order[qi],p=people[idx];
+      var others=shuffle(people.filter(function(x){return x.name!==p.name})).slice(0,3).map(function(x){return x.name});
+      var opts=shuffle(others.concat([p.name]));
+      aStage.innerHTML='<p class="hint">سؤال '+(qi+1)+' من '+order.length+'</p>'+
+        '<div class="face-big">'+faceSVG(p)+'</div><p class="q">اسمه إيه؟</p>'+
+        '<div class="opts">'+opts.map(function(n){return '<button class="opt" data-n="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div>'+
+        '<div id="a-fb" aria-live="polite"></div>';
+      $$('.opt',aStage).forEach(function(b){
+        b.onclick=function(){
+          var right=b.getAttribute('data-n')===p.name;
+          if(right)score++;
+          $$('.opt',aStage).forEach(function(o){
+            o.disabled=true;
+            if(o.getAttribute('data-n')===p.name)o.classList.add('right');
+            else if(o===b)o.classList.add('wrong');
+          });
+          $('#a-fb').innerHTML='<p class="hint">'+(right?'صح ✓':'الاسم '+esc(p.name)+' ('+esc(p.feats.join('، '))+')')+
+            (hooks[idx]?'<br>ربطتها بـ: «'+esc(hooks[idx])+'»':'')+'</p><button class="btn small" id="a-next">'+(qi+1>=order.length?'شوف النتيجة':'اللي بعده')+'</button>';
+          $('#a-next').focus();
+          $('#a-next').onclick=function(){qi++;show()};
+        };
+      });
+    }
+    show();
+  }
+}
+$('#a-start').onclick=aStart;
+
+/* ---------- LOCI ---------- */
+var POOL=[
+  {t:'شراء لبن وعيش',k:['لبن','عيش']},
+  {t:'شاحن الموبايل في شنطة اللابتوب',k:['شاحن']},
+  {t:'دفع فاتورة الكهرباء قبل الخميس',k:['كهرباء','فاتور']},
+  {t:'مفاتيح العربية في جيب الجاكت',k:['مفاتيح','مفتاح']},
+  {t:'اتصال بأحمد الساعة ٥',k:['احمد']},
+  {t:'إرسال الملف للمدير',k:['ملف','مدير']},
+  {t:'شراء هدية لعيد ميلاد صديق',k:['هدي','عيد ميلاد']},
+  {t:'تغيير زيت العربية يوم السبت',k:['زيت']},
+  {t:'حجز تذاكر القطر',k:['تذاكر','تذكر','قطر']},
+  {t:'سقي النباتات',k:['نبات','سقي']},
+  {t:'رقم شقة الجيران ١٢',k:['12','جيران']},
+  {t:'إحضار الكتاب من المكتبة',k:['كتاب','مكتب']}
+];
+var DEF_LOCS=['باب الشقة','الكنبة','التلفزيون','المطبخ','السرير'];
+var locs=(saved.locs&&saved.locs.length===5)?saved.locs:DEF_LOCS;
+$('#l-locs').innerHTML=locs.map(function(l,i){return '<input class="inp" data-i="'+i+'" maxlength="24" value="'+esc(l)+'" aria-label="المكان '+(i+1)+'">'}).join('');
+var lStage=$('#l-stage');
+function lStart(){
+  locs=$$('#l-locs .inp').map(function(x,i){return x.value.trim()||DEF_LOCS[i]});
+  saved.locs=locs;persist();
+  var items=shuffle(POOL).slice(0,5);
+  lStage.innerHTML='<p class="hint">تخيّل كل حاجة في مكانها بشكل مبالغ فيه: ضخمة، بتتحرك، وليها صوت أو ريحة. خد ١٠ ثواني تقريباً لكل واحدة.</p>'+
+    '<div class="pairs">'+locs.map(function(l,i){return '<div class="pair"><span class="loc">📍 '+esc(l)+'</span><span>'+esc(items[i].t)+'</span></div>'}).join('')+'</div>'+
+    '<button class="btn" id="l-ready">أنا جاهز للاختبار</button>';
+  $('#l-ready').onclick=function(){test(items)};
+}
+function test(items){
+  var order=shuffle([0,1,2,3,4]);
+  lStage.innerHTML='<p class="q">إيه اللي كان في كل مكان؟</p><div class="pairs">'+
+    order.map(function(i){return '<div class="pair"><label class="loc" for="li'+i+'">📍 '+esc(locs[i])+'</label><input class="inp" id="li'+i+'" data-i="'+i+'" autocomplete="off" placeholder="اكتب كلمة أو اتنين"></div>'}).join('')+'</div>'+
+    '<button class="btn" id="l-check">تحقق</button>';
+  $('#l-check').onclick=function(){
+    var score=0,rows='';
+    order.forEach(function(i){
+      var v=norm($('#li'+i).value),ok=v&&items[i].k.some(function(k){return v.indexOf(norm(k))>-1});
+      if(ok)score++;
+      rows+='<div class="pair '+(ok?'ok':'no')+'"><span class="loc">📍 '+esc(locs[i])+'</span><span>'+(ok?'✓ ':'✗ ')+esc(items[i].t)+'</span></div>';
+    });
+    lStage.innerHTML='<div class="res"><div class="score">نتيجتك: '+score+' من 5</div><div class="pairs">'+rows+'</div>'+
+      '<p class="tip">لو نسيت حاجة، غالباً الصورة كانت هادية. خلّيها أغرب في الجولة الجاية.</p>'+
+      '<button class="btn" id="l-again">جولة تانية</button></div>';
+    $('#l-again').onclick=lStart;
+  };
+}
+$('#l-start').onclick=lStart;
+
+/* ---------- REVIEW ---------- */
+var INTERVALS=[
+  {l:'بعد ١٠ دقايق',ms:10*60e3},{l:'بعد يوم',ms:864e5},{l:'بعد ٣ أيام',ms:3*864e5},
+  {l:'بعد أسبوع',ms:7*864e5},{l:'بعد شهر',ms:30*864e5}
+];
+saved.reviews=saved.reviews||[];
+function fmt(t){
+  try{return new Date(t).toLocaleString('ar-EG',{weekday:'long',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}
+  catch(e){return new Date(t).toLocaleString()}
+}
+function renderReviews(){
+  var box=$('#r-list'),now=Date.now();
+  if(!saved.reviews.length){box.innerHTML='<p class="tip">مفيش حاجة في الجدول لسه. اكتب أول حاجة عايز تحفظها فوق.</p>';return}
+  box.innerHTML=saved.reviews.map(function(r){
+    return '<div class="rv-item"><div class="rv-head"><strong>'+esc(r.text)+'</strong>'+
+      '<button class="btn ghost small" data-del="'+r.id+'" aria-label="احذف '+esc(r.text)+'">حذف</button></div><div class="steps">'+
+      INTERVALS.map(function(iv,i){
+        var at=r.t0+iv.ms,due=now>=at&&!r.done[i];
+        return '<label class="step '+(r.done[i]?'done ':'')+(due?'due':'')+'"><input type="checkbox" data-id="'+r.id+'" data-i="'+i+'"'+(r.done[i]?' checked':'')+'>'+
+          '<span class="lab">'+iv.l+'</span><span class="when">'+(due?'حان وقتها · ':'')+fmt(at)+'</span></label>';
+      }).join('')+'</div></div>';
+  }).join('');
+}
+$('#r-list').addEventListener('change',function(e){
+  var c=e.target;if(!c.matches('input[type=checkbox]'))return;
+  var r=saved.reviews.filter(function(x){return String(x.id)===c.getAttribute('data-id')})[0];
+  if(r){r.done[+c.getAttribute('data-i')]=c.checked;persist();renderReviews()}
+});
+$('#r-list').addEventListener('click',function(e){
+  var id=e.target.getAttribute&&e.target.getAttribute('data-del');
+  if(!id)return;
+  saved.reviews=saved.reviews.filter(function(x){return String(x.id)!==id});
+  persist();renderReviews();
+});
+function addReview(){
+  var inp=$('#r-text'),v=inp.value.trim();
+  if(!v){inp.focus();return}
+  saved.reviews.unshift({id:Date.now(),text:v,t0:Date.now(),done:[false,false,false,false,false]});
+  inp.value='';persist();renderReviews();
+}
+$('#r-add').onclick=addReview;
+$('#r-text').addEventListener('keydown',function(e){if(e.key==='Enter')addReview()});
+renderReviews();
+setInterval(renderReviews,60000);
+})();
+</script>
+</body>
+</html>
+
